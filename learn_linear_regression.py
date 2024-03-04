@@ -8,104 +8,104 @@ from sklearn.metrics import mean_squared_error
 from sklearn.pipeline import make_pipeline
 
 # Load the training and test data
-train_data = np.loadtxt("train.dat")
-test_data = np.loadtxt("test.dat")
+trainData = np.loadtxt("train.dat")
+testData = np.loadtxt("test.dat")
 
 # Separate the input and output values for training and test data
-X_train_raw = train_data[:, 0].reshape(-1, 1)
-y_train_raw = train_data[:, 1]
-X_test_raw = test_data[:, 0].reshape(-1, 1)
-y_test_raw = test_data[:, 1]
+xTrainRaw = trainData[:, 0].reshape(-1, 1)
+yTrainRaw = trainData[:, 1]
+xTestRaw = testData[:, 0].reshape(-1, 1)
+yTestRaw = testData[:, 1]
 
 # Normalize the features and target using StandardScaler
-scaler_X = StandardScaler()
-scaler_y = StandardScaler()
+xScaler = StandardScaler()
+yScaler = StandardScaler()
 
-X_train_scaled = scaler_X.fit_transform(X_train_raw)
-y_train_scaled = scaler_y.fit_transform(y_train_raw.reshape(-1, 1)).flatten()
-X_test_scaled = scaler_X.transform(X_test_raw)
-y_test_scaled = scaler_y.transform(y_test_raw.reshape(-1, 1)).flatten()
+xTrainScaled = xScaler.fit_transform(xTrainRaw)
+yTrainScaled = yScaler.fit_transform(yTrainRaw.reshape(-1, 1)).flatten()
+xTestScaled = xScaler.transform(xTestRaw)
+yTestScaled = yScaler.transform(yTestRaw.reshape(-1, 1)).flatten()
 
 kf = KFold(n_splits=12, shuffle=False)
 
 # Initialize lists to store cross-validation RMSE results
-cv_train_rmse = []
-cv_test_rmse = []
+cvTrainRMSE = []
+cvTestRMSE = []
 
 # polynomial degree loop
 for degree in range(1, 29):
 
     pipeline = make_pipeline(PolynomialFeatures(degree=degree, include_bias=False), Ridge(alpha=0, fit_intercept=True))
-    fold_train_rmse = []
-    fold_test_rmse = []
+    foldTrainRMSE = []
+    foldTestRMSE = []
     
     # cross validation
-    for train_index, test_index in kf.split(X_train_scaled):
+    for trainIndex, testIndex in kf.split(xTrainScaled):
         # Split the data
-        X_cv_train, X_cv_test = X_train_scaled[train_index], X_train_scaled[test_index]
-        y_cv_train, y_cv_test = y_train_scaled[train_index], y_train_scaled[test_index]
+        xcvTrain, xcvTest = xTrainScaled[trainIndex], xTrainScaled[testIndex]
+        ycvTrain, ycvTest = yTrainScaled[trainIndex], yTrainScaled[testIndex]
         
         # Fit the model to the training data of CV fold
-        pipeline.fit(X_cv_train, y_cv_train)
+        pipeline.fit(xcvTrain, ycvTrain)
         
         # Predict on the training and test data of CV fold
-        y_cv_train_pred = pipeline.predict(X_cv_train)
-        y_cv_test_pred = pipeline.predict(X_cv_test)
+        ycvTrainPrediction = pipeline.predict(xcvTrain)
+        ycvTestPrediction = pipeline.predict(xcvTest)
         
         # Calculate RMSE and append
-        fold_train_rmse.append(np.sqrt(mean_squared_error(y_cv_train, y_cv_train_pred)))
-        fold_test_rmse.append(np.sqrt(mean_squared_error(y_cv_test, y_cv_test_pred)))
+        foldTrainRMSE.append(np.sqrt(mean_squared_error(ycvTrain, ycvTrainPrediction)))
+        foldTestRMSE.append(np.sqrt(mean_squared_error(ycvTest, ycvTestPrediction)))
     
     # Append average RMSE across folds
-    cv_train_rmse.append(np.mean(fold_train_rmse))
-    cv_test_rmse.append(np.mean(fold_test_rmse))
+    cvTrainRMSE.append(np.mean(foldTrainRMSE))
+    cvTestRMSE.append(np.mean(foldTestRMSE))
 
 # Find the degree with the lowest average test RMSE
-best_degree = np.argmin(cv_test_rmse)
-print(f"Best polynomial degree: {best_degree}")
+bestDegree = np.argmin(cvTestRMSE)
+print(f"Best polynomial degree: {bestDegree}")
 
 # Train the final model on the entire training set with the best degree
-final_pipeline = make_pipeline(PolynomialFeatures(degree=best_degree, include_bias=False), Ridge(alpha=0, fit_intercept=True))
-final_pipeline.fit(X_train_scaled, y_train_scaled)
+finalPipeline = make_pipeline(PolynomialFeatures(degree=bestDegree, include_bias=False), Ridge(alpha=0, fit_intercept=True))
+finalPipeline.fit(xTrainScaled, yTrainScaled)
 
 # Save the coefficients
-final_coeffs = final_pipeline.named_steps['ridge'].coef_
-np.savetxt("w.dat", final_coeffs)
+finalCoefficients = finalPipeline.named_steps['ridge'].coef_
+np.savetxt("w.dat", finalCoefficients)
 
 # Predict on test data using final model
-y_test_pred_scaled = final_pipeline.predict(X_test_scaled)
+yTestPredictionScaled = finalPipeline.predict(xTestScaled)
 
 # Transform the predictions back to OG scale
-y_test_pred = scaler_y.inverse_transform(y_test_pred_scaled.reshape(-1, 1)).flatten()
+yTestPrediction = yScaler.inverse_transform(yTestPredictionScaled.reshape(-1, 1)).flatten()
 
 # Calculate the RMSE on test data
-test_rmse = np.sqrt(mean_squared_error(y_test_raw, y_test_pred))
-print(f"Test RMSE: {test_rmse}")
+testRMSE = np.sqrt(mean_squared_error(yTestRaw, yTestPrediction))
+print(f"Test RMSE: {testRMSE}")
 
 # Calculate RMSE on the training data for final model
-y_train_pred_scaled = final_pipeline.predict(X_train_scaled)
-y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled.reshape(-1, 1)).flatten()
-train_rmse = np.sqrt(mean_squared_error(y_train_raw, y_train_pred))
-print(f"Train RMSE: {train_rmse}")
+yTrainPredictionScaled = finalPipeline.predict(xTrainScaled)
+yTrainPrediction = yScaler.inverse_transform(yTrainPredictionScaled.reshape(-1, 1)).flatten()
+trainRMSE = np.sqrt(mean_squared_error(yTrainRaw, yTrainPrediction))
+print(f"Train RMSE: {trainRMSE}")
 
 # Predictions
-week_range_scaled = np.linspace(X_train_scaled.min(), X_train_scaled.max(), 91).reshape(-1, 1)
-predicted_cases_scaled = final_pipeline.predict(week_range_scaled)
+weekRangeScaled = np.linspace(xTrainScaled.min(), xTrainScaled.max(), 91).reshape(-1, 1)
+predictedCasesScaled = finalPipeline.predict(weekRangeScaled)
 
 # Inverse transform 
-predicted_cases = scaler_y.inverse_transform(predicted_cases_scaled.reshape(-1, 1)).flatten()
+predictedCases = yScaler.inverse_transform(predictedCasesScaled.reshape(-1, 1)).flatten()
 
 # Inverse transform
-week_range = scaler_X.inverse_transform(week_range_scaled).flatten()
+weekRange = xScaler.inverse_transform(weekRangeScaled).flatten()
 
 # Plot training data
-plt.scatter(X_train_raw, y_train_raw, color='blue', label='Training data')
+plt.scatter(xTrainRaw, yTrainRaw, color='blue', label='Training data')
 
 # Plot test data
-plt.scatter(X_test_raw, y_test_raw, color='yellow', label='Test data')
+plt.scatter(xTestRaw, yTestRaw, color='yellow', label='Test data')
 
 # Plot polynomial curve
-plt.plot(week_range, predicted_cases, color='red', label=f'Polynomial Degree {best_degree}')
+plt.plot(weekRange, predictedCases, color='red', label=f'Polynomial Degree {bestDegree}')
 
 # Label axis
 plt.xlabel('Week Number')
@@ -122,8 +122,8 @@ plt.show()
 
 # Plot the average training RMSE vs. polynomial degree
 degrees = list(range(1, 29))
-plt.plot(degrees, cv_train_rmse, color='blue', marker='o', label='Average CV Train RMSE')
-plt.scatter(degrees, cv_train_rmse, color='red')
+plt.plot(degrees, cvTrainRMSE, color='blue', marker='o', label='Average CV Train RMSE')
+plt.scatter(degrees, cvTrainRMSE, color='red')
 plt.xlabel('Polynomial Degree')
 plt.ylabel('Average CV Train RMSE')
 plt.title('Average CV Train RMSE vs Polynomial Degree')

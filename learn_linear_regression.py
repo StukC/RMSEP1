@@ -89,7 +89,7 @@ train_rmse = np.sqrt(mean_squared_error(y_train_raw, y_train_pred))
 print(f"Train RMSE: {train_rmse}")
 
 # Predictions
-week_range_scaled = np.linspace(X_train_scaled.min(), X_train_scaled.max(), 500).reshape(-1, 1)
+week_range_scaled = np.linspace(X_train_scaled.min(), X_train_scaled.max(), 91).reshape(-1, 1)
 predicted_cases_scaled = final_pipeline.predict(week_range_scaled)
 
 # Inverse transform 

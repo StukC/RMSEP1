@@ -14,6 +14,6 @@ pip install numpy
 pip install matplotlib
 pip install scikit-learn
 
-Afterwards, you should be able to open the python file from explorer, or run in console in root directory:
+Afterwards, you should be able to open the python file from explorer under the 'dist' project directory, or run in console in root directory:
 
 python learn_linear_regression.py
